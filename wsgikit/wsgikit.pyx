@@ -615,20 +615,30 @@ class HttpRequest(object):
 		return max
 	
 	def _parse_to_files(self):
-		for part in self._parts.values():
+		cdef int key
+		keys = list(self._parts.keys())
+		
+		for key in keys:
+			part = self._parts[key]
 			if part['filename'] is not None:
 				name = part['name']
 				del part['name']
 				self._parse_param( name, part, self.FILES)
+				del self._parts[key]
 	
 	def _parse_to_body(self):
-		for part in self._parts.values():
+		cdef int key
+		keys = list(self._parts.keys())
+		
+		for key in keys:
+			part = self._parts[key]
 			if part['filename'] is None:
 				self._parse_param(
 					part['name'],
 					self._decode_value( part['data']),
 					self.BODY
 				)
+				del self._parts[key]
 	
 	def _parse_query(self):
 		qs = 'QUERY_STRING'
