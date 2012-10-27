@@ -607,7 +607,7 @@ class HttpRequest(object):
 			if val > max:
 				max = val
 		
-		if max is None:
+		if max == -1:
 			max = 0
 		else :
 			max += 1
