@@ -388,6 +388,7 @@ class HttpRequest(object):
 		# remove temporary properties - we don't need them anymore
 		del self._parts
 		del self._files_counter
+		del self._body_length
 	
 	def _parse_data_block(self, data, boundary, data_length):
 		cdef int curr_part_idx
