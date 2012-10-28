@@ -163,14 +163,71 @@ class HttpRequest(object):
 		self._max_content_length   = max_content_length
 		self._uploaded_file_prefix = uploaded_file_prefix
 		
+		"""
+		Storage for handling QUERY_STRING parsed parameters
+		(equivalent to PHP's $_GET)
+		
+		:ivar QUERY: dict  
+		"""
 		self.QUERY    = {}
+		"""
+		Storage for handling request body parsed parameters
+		(equivalent to PHP's $_POST)
+		
+		:ivar BODY: dict  
+		"""
 		self.BODY     = {}
+		"""
+		Storage for handling cookie parsed variables
+		(equivalent to PHP's $_COOKIE)
+		
+		:ivar COOKIE: dict  
+		"""
 		self.COOKIE   = {}
+		"""
+		Storage for handling parsed request headers
+		
+		:ivar HEADERS: dict
+		"""
 		self.HEADERS  = {}
+		"""
+		Storage for handling uploaded files
+		(equivalent to PHP's $_FILES, but the structure is different)
+		
+		File element structure is:
+		
+		::
+			{
+				"filename" : str - uploaded file name,
+				"headers"  : dict - headers retrieved from the attachment part of te file in request body
+				"tmp_name" : str - path to temporary file location
+				"length"   : int - file size in bytes
+				"mime"     : str - file mime-type
+			}
+		
+		:ivar FILES: dict
+		"""
 		self.FILES    = {}
+		"""
+		Storage for handling all server environment. It stores all WSGI environ,
+		except 'wsgi.input'
+		(equivalent to PHP's $_SERVER)
+		
+		:ivar SERVER: dict  
+		"""
 		self.SERVER   = {}
 		
+		"""
+		Instance of FileUploader object associated with request
+		
+		:ivar FileUploader: FileUploader  
+		"""
 		self.FileUploader = None
+		"""
+		Shortcut to HttpRequest.server('REQUEST_METHOD')
+		
+		:ivar method: str
+		"""
 		self.method       = None
 		
 		self._parse()
@@ -564,7 +621,7 @@ class HttpRequest(object):
 		if param_name not in param_dict:
 			param_dict[param_name] = {}
 		
-		if len(param_keys) == 0:
+		if len( param_keys) == 0:
 			param_dict[param_name] = value
 			return
 		
@@ -623,7 +680,12 @@ class HttpRequest(object):
 			if part['filename'] is not None:
 				name = part['name']
 				del part['name']
+				
+				part['handle'].close()
+				del part['handle']
+				
 				self._parse_param( name, part, self.FILES)
+				
 				del self._parts[key]
 	
 	def _parse_to_body(self):
@@ -702,7 +764,7 @@ class HttpRequest(object):
 		                      given key this will be returned (default is None)
 		:rtype: mixed - storage dict or value or default_value
 		"""
-		env = getattr(self, storage)
+		env = getattr( self, storage)
 		
 		if key is None:
 			return default_value
@@ -925,10 +987,6 @@ class FileUploader(object):
 		if type(file) is dict and 'tmp_name' in file:
 			if os.path.isdir( destination):
 				destination += '/' + file['filename']
-			
-			if file['handle']:
-				file['handle'].close()
-				del file['handle']
 			
 			if os.path.isfile( destination) and not overwrite:
 				raise FileOverwriteError( destination)
