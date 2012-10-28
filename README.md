@@ -17,6 +17,7 @@ of data representation. Thus it defines the following storages for handled
 request data with HttpRequest object:
 
   - SERVER
+  - HEADERS
   - BODY
   - QUERY
   - COOKIE
