@@ -977,13 +977,13 @@ class FileUploader(object):
 		overwritten during the move, otherwise error will be raised
 		
 		:param file: dict object of the file compatible by structure with the
-                     FILES storage item in wsgikit.HttpRequest object
+		             FILES storage item in wsgikit.HttpRequest object
 		:param destination: str - path where to move the file. If existing directory
-                            provided will save the file in that directory with the
-                            file name passed in HTTP request
-        :param overwrite: bool - flag, to turn on/off files overwriting
-        :rtype: returns new file destination on success
-   		:raise: FileOverwriteError, UploadedFileSaveError or MoveError
+		                    provided will save the file in that directory with the
+		                    file name passed in HTTP request
+		:param overwrite: bool - flag, to turn on/off files overwriting
+		:rtype: returns new file destination on success
+		:raise: FileOverwriteError, UploadedFileSaveError or MoveError
 		"""
 		if type(file) is dict and 'tmp_name' in file:
 			if os.path.isdir( destination):
@@ -1004,10 +1004,10 @@ class FileUploader(object):
 		"""Moves all the files uploaded during HTTP request to the given destination
 		
 		:param destination: str - path where to store the files. Destination MUST be
-                            a directory, otherwise an error will be raised
-        :param overwrite: bool - flag, to turn on/off files overwriting
-        :rtype: list - new files destinations
-        :raise: FileOverwriteError, UploadedFileSaveError, MoveDestinationError or MoveError
+		                    a directory, otherwise an error will be raised
+		:param overwrite: bool - flag, to turn on/off files overwriting
+		:rtype: list - new files destinations
+		:raise: FileOverwriteError, UploadedFileSaveError, MoveDestinationError or MoveError
 		"""
 		moved_files = []
 		
