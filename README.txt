@@ -51,6 +51,17 @@ Currently this module provides the following functionality:
  The same rule works on BODY, QUERY, COOKIE and FILES storages of HttpRequest
  object.
 
+Basic usage example:
+
+    import wsgikit
+    
+    def my_wsgi_app( environ, start_response):
+        status = '200 OK'
+        response_headers = [('Content-type','text/plain')]
+        start_response( status, response_headers)
+        request = wsgikit.HttpRequest( environ)
+        return wsgikit.PrettyDict.format( request.to_dict())
+
 Installation
 --------------------------------------------------------------------------------
 This module is availabe via Python Package Index (PyPI). Installation is
