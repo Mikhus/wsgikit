@@ -30,8 +30,8 @@ request data with HttpRequest object:
   - max file size in bytes per uploaded file
   - enable/disable file uploads
 
-Such limitations gives an ability to prevent WSGI application from been flooded
-via network with the large requests.
+  Such limitations gives an ability to prevent WSGI application from been flooded
+  via network with the large requests.
 
 3. Simple work with uploaded files through FileUploader
 
@@ -39,7 +39,7 @@ via network with the large requests.
 
   foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
 
-will be parsed to the following Python's dictionary object:
+  will be parsed to the following Python's dictionary object:
 
   {
   		foo : {
