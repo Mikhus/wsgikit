@@ -54,14 +54,14 @@ Currently this module provides the following functionality:
 Basic usage example:
 
 ```python
-    import wsgikit
-    
-    def my_wsgi_app( environ, start_response):
-        status = '200 OK'
-        response_headers = [('Content-type','text/plain')]
-        start_response( status, response_headers)
-        request = wsgikit.HttpRequest( environ)
-        return wsgikit.PrettyDict.format( request.to_dict())
+import wsgikit
+
+def my_wsgi_app( environ, start_response):
+    status = '200 OK'
+    response_headers = [('Content-type','text/plain')]
+    start_response( status, response_headers)
+    request = wsgikit.HttpRequest( environ)
+    return wsgikit.PrettyDict.format( request.to_dict())
 ```
 
 Installation
