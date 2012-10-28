@@ -29,25 +29,28 @@ request data with HttpRequest object:
   - max request body size
   - max file size in bytes per uploaded file
   - enable/disable file uploads
+
 Such limitations gives an ability to prevent WSGI application from been flooded
 via network with the large requests.
 
 3. Simple work with uploaded files through FileUploader
 
 4. PHP-style parameters parsing. For example such QUERY_STRING
-  foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
+
+	foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
+
 will be parsed to the following Python's dictionary object:
-  {
-  		foo : {
-				0 : {
-					"bar" : 1
-				},
-				1 : {
-					"baz" : 2
-				},
-				"xyz" : 777
-			}
-		}
+
+	foo : {
+		0 : {
+			"bar" : 1
+		},
+		1 : {
+			"baz" : 2
+		},
+		"xyz" : 777
+	}
+
 The same rule works on BODY, QUERY, COOKIE and FILES storages of HttpRequest
 object.
 
