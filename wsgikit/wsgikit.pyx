@@ -1,4 +1,5 @@
 """Python tools for WSGI: HTTP request parsing, file upload handling, etc.
+
 This code is subject to MIT license
 
 Copyright (c) 2012 Mykhailo Stadnyk <mikhus@gmail.com>
@@ -19,6 +20,9 @@ FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+:Author: Mykhailo Stadnyk <mikhus@gmail.com>
+:Version: 1.0b
 """
 import sys,os,hashlib,time,random,re
 
@@ -134,9 +138,6 @@ class HttpRequest(object):
 			request = wsgikit.HttpRequest( environ)
 			
 			return str( request)
-	
-	:Author: Mykhailo Stadnyk <mikhus@gmail.com>
-	:Version: 1.0b
 	"""
 	_rx_keys_lookup = re.compile( "\[(.*?)\]")
 	_rx_name_lookup = re.compile( "^(.*?)(?:\[.*$|$)")
