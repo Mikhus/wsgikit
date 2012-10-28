@@ -12,10 +12,9 @@ which reads request data line-by-line and stores each part fully in memory.
 
 Currently this module provides the following functionality:
 
-1. HTTP requests parsing from WSGI environment. It provides PHP-like style
-of data representation. Thus it defines the following storages for handled
-request data with HttpRequest object:
-
+ 1. HTTP requests parsing from WSGI environment. It provides PHP-like style
+ of data representation. Thus it defines the following storages for handled
+ request data with HttpRequest object:
   - SERVER
   - HEADERS
   - BODY
@@ -23,36 +22,34 @@ request data with HttpRequest object:
   - COOKIE
   - FILES
 
-2. Configurable limitations for HTTP request. Currently it's possible to limit:
-
+ 2. Configurable limitations for HTTP request. Such limitations gives an 
+ ability to prevent WSGI application from been flooded via network with the
+ large requests.Currently it's possible to limit:
   - max allowed files to upload
   - max request body size
   - max file size in bytes per uploaded file
   - enable/disable file uploads
 
-Such limitations gives an ability to prevent WSGI application from been flooded
-via network with the large requests.
+ 3. Simple work with uploaded files through FileUploader
 
-3. Simple work with uploaded files through FileUploader
+ 4. PHP-style parameters parsing. For example such QUERY_STRING
 
-4. PHP-style parameters parsing. For example such QUERY_STRING
+    	foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
 
-	foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
+ will be parsed to the following Python's dictionary object:
 
-will be parsed to the following Python's dictionary object:
+    	foo : {
+        	0 : {
+            	"bar" : 1
+        	},
+        	1 : {
+            	"baz" : 2
+        	},
+        	"xyz" : 777
+    	}
 
-	foo : {
-		0 : {
-			"bar" : 1
-		},
-		1 : {
-			"baz" : 2
-		},
-		"xyz" : 777
-	}
-
-The same rule works on BODY, QUERY, COOKIE and FILES storages of HttpRequest
-object.
+ The same rule works on BODY, QUERY, COOKIE and FILES storages of HttpRequest
+ object.
 
 Installation
 --------------------------------------------------------------------------------
@@ -75,8 +72,8 @@ Documentation
 On-line documentation coming soon. Module is self-documented, so it is available
 to read docs by using
 
-  > import wsgikit
-  > help(wsgikit)
+    > import wsgikit
+    > help(wsgikit)
 
 in python command line.
 
@@ -88,4 +85,5 @@ LICENSE.txt file
 Copyright (c) 2012
 --------------------------------------------------------------------------------
 Author: Mykhailo Stadnyk <mikhus@gmail.com>
+
 Home page: https://github.com/Mikhus/wsgikit
