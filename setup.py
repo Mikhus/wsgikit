@@ -1,11 +1,14 @@
 from distutils.core import setup
 from distutils.extension import Extension
-from wsgikit import __version__
-from Cython.Distutils import build_ext
+from Cython.Build import cythonize
+
+ext_modules = [
+	Extension( "wsgikit", ["wsgikit/wsgikit.pyx"])
+]
 
 setup(
 	name           = "wsgikit",
-	version        = __version__,
+	version        = "0.2a",
 	description    = "Python tools for WSGI applications",
 	author         = "Mykhailo Stadnyk",
 	author_email   = "mikhus@gmail.com",
@@ -14,9 +17,7 @@ setup(
 	keywords       = ["HTTP request", "file upload"],
 	platforms      = ['OS Independent'],
 	license        = 'MIT License',
-	cmdclass       = {'build_ext': build_ext},
-	packages       = ['wsgikit'],
-	ext_modules    = [Extension("wsgikit", ["wsgikit/wsgikit.pyx"])],
+	ext_modules    = cythonize(ext_modules),
 	classifiers    = [
 		'Development Status :: 4 - Beta',
 		'Environment :: Other Environment',
