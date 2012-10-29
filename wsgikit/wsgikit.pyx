@@ -23,7 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys,os,hashlib,time,random,re
 
-__version__ = "0.2.1a"
+__version__ = "0.2.2a"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
 
 class HttpRequestError(Exception):
@@ -143,14 +143,16 @@ class HttpRequest(object):
 	_rx_name_lookup = re.compile( "^(.*?)(?:\[.*$|$)")
 	
 	def __init__(self,
-		environ              = None,          # wsgi environment
-		encoding             = 'utf-8',       # request encoding
-		files_upload_on      = True,          # do uploaded files should be loaded to the memory or saved temporary to disc?
-		uploaded_files_dir   = '/tmp',        # where to store temporary uploaded files
-		max_uploaded_files   = 20,            # max number for uploaded files
-		max_filesize         = 2097152,       # 2MB max size per file
-		max_content_length   = 8388608,       # 8MB max size per body content
-		uploaded_file_prefix = 'http-upload-' # prefix to use for temporary uploaded file
+		environ              = None,           # wsgi environment
+		encoding             = 'utf-8',        # request encoding
+		files_upload_on      = True,           # do uploaded files should be loaded to the memory or saved temporary to disc?
+		uploaded_files_dir   = '/tmp',         # where to store temporary uploaded files
+		max_uploaded_files   = 20,             # max number for uploaded files
+		max_filesize         = 2097152,        # 2MB max size per file
+		max_content_length   = 8388608,        # 8MB max size per body content
+		uploaded_file_prefix = 'http-upload-', # prefix to use for temporary uploaded file
+		read_block_size      = 8192            # 8KB by default of read data block size in bytes,
+											   # if 0 or negative value passed passed - will read everything into memory
 	):
 		if environ is None:
 			environ = os.environ
@@ -163,6 +165,7 @@ class HttpRequest(object):
 		self._max_filesize         = max_filesize
 		self._max_content_length   = max_content_length
 		self._uploaded_file_prefix = uploaded_file_prefix
+		self._read_block_size      = read_block_size
 		
 		"""
 		Storage for handling QUERY_STRING parsed parameters
@@ -394,11 +397,14 @@ class HttpRequest(object):
 				self.BODY = self._parse_query_params( instream.read( content_length), self._encoding)
 	
 	def _parse_multipart(self, instream, boundary, content_length):
-		cdef int buff_len = 8 * 1024
+		cdef int buff_len = self._read_block_size
 		cdef long remaining
 		cdef int k
 		cdef int size
 		cdef long data_read
+		
+		if buff_len <= 0 or not buff_len:
+			buff_len = content_length
 		
 		# create temporary properties
 		try :
