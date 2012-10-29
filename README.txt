@@ -38,7 +38,7 @@ Currently this module provides the following functionality:
 
  will be parsed to the following Python's dictionary object:
 
-    	foo : {
+    	"foo" : {
         	0 : {
             	"bar" : 1
         	},
