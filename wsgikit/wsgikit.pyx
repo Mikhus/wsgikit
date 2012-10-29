@@ -388,6 +388,9 @@ class HttpRequest(object):
 				self._parse_multipart( instream, self._encode_value( boundary), content_length)
 			
 			else :
+				if content_length > self._max_content_length :
+					raise MaxBodySizeError( self._max_content_length)
+				
 				self.BODY = self._parse_query_params( instream.read( content_length), self._encoding)
 	
 	def _parse_multipart(self, instream, boundary, content_length):
