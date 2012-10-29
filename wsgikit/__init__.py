@@ -1,2 +1,2 @@
-__version__ = "1.1a"
+__version__ = "0.2a"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
