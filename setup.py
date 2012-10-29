@@ -7,7 +7,7 @@ module_src = "wsgikit/wsgikit.pyx"
 
 def version():
 	fp = open( module_src)
-	version = re.search("^__version__ = ['\"]([^'\"]*)['\"]", fp.read(), re.M).group(1)
+	version = re.search( "^__version__\s*=\s*['\"]([^'\"]*)['\"]", fp.read(), re.M).group(1)
 	fp.close()
 	return version
 
