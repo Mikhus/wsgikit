@@ -34,7 +34,7 @@ Currently this module provides the following functionality:
 
  4. PHP-style parameters parsing. For example such QUERY_STRING
 
-      foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
+     foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
 
  will be parsed to the following Python's dictionary object:
 
@@ -64,8 +64,23 @@ Basic usage example:
 
 Installation
 --------------------------------------------------------------------------------
-This module is availabe via Python Package Index (PyPI). Installation is
-possible with pip or easy_install, like
+Before installing wsgikit module, be ensure you have Cython module installed.
+Installation as easy as:
+
+    > pip install cython
+
+or
+
+    > easy_install sython
+
+There is also possibility to install Cython manually. Just download the package
+from http://cython.org/#download, unpack it and run:
+
+    > cd cython
+    > python setup.py install
+
+Than wsgikit module is availabe to install via Python Package Index (PyPI).
+Installation is also as easy as:
 
     > pip install wsgikit
 or
