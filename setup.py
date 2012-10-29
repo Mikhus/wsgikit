@@ -1,22 +1,7 @@
 from distutils.core import setup
 from distutils.extension import Extension
 from wsgikit import __version__
-try :
-	from Cython.Distutils import build_ext
-except ImportError:
-	print("""You need to install Cython to build wsgikit extension.
-To install Cython, please, use:
-
- > pip install cython
-
-or
-
- > easy_install cython
-
-or you can download and install it manually
-from http://cython.org/#download
-""")
-	exit(1)
+from Cython.Distutils import build_ext
 
 setup(
 	name           = "wsgikit",
