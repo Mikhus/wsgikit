@@ -11,13 +11,17 @@ def version():
 	fp.close()
 	return version
 
-ext_modules = [
+__version__ = version()
+
+ext_modules = cythonize([
+	Extension( "wsgikit", [module_src])
+]) + [
 	Extension( "wsgikit", [module_src])
 ]
 
 setup(
 	name           = "wsgikit",
-	version        = version(),
+	version        = __version__,
 	description    = "Python tools for WSGI applications",
 	author         = "Mykhailo Stadnyk",
 	author_email   = "mikhus@gmail.com",
@@ -26,7 +30,7 @@ setup(
 	keywords       = ["HTTP request", "file upload"],
 	platforms      = ['OS Independent'],
 	license        = 'MIT License',
-	ext_modules    = cythonize( ext_modules),
+	ext_modules    = ext_modules,
 	classifiers    = [
 		'Development Status :: 4 - Beta',
 		'Environment :: Other Environment',
