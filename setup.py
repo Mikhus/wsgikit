@@ -4,7 +4,7 @@ from Cython.Distutils import build_ext
 
 setup(
 	name           = "wsgikit",
-    version        = "1.0b",
+    version        = "1.1a",
     description    = "Python tools for WSGI applications",
     author         = "Mykhailo Stadnyk",
     author_email   = "mikhus@gmail.com",

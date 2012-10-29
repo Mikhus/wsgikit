@@ -22,7 +22,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 :Author: Mykhailo Stadnyk <mikhus@gmail.com>
-:Version: 1.0b
+:Version: 1.1a
 """
 import sys,os,hashlib,time,random,re
 
@@ -295,6 +295,12 @@ class HttpRequest(object):
 		
 		return value
 	
+	def _encode_value(self, value):
+		if type(value) == str:
+			value = value.encode( self._encoding)
+		
+		return value
+	
 	def _parse_cookie(self):
 		cookie = self.header( 'Cookie')
 		
@@ -379,7 +385,7 @@ class HttpRequest(object):
 					break
 			
 			if is_multipart:
-				self._parse_multipart( instream, bytes( boundary, self._encoding), content_length)
+				self._parse_multipart( instream, self._encode_value( boundary), content_length)
 			
 			else :
 				self.BODY = self._parse_query_params( instream.read( content_length), self._encoding)
@@ -562,9 +568,9 @@ class HttpRequest(object):
 				try :
 					if tmp_name_key not in part_info:
 						m = hashlib.md5()
-						m.update( bytes( str( time.time()), self._encoding))
-						m.update( bytes( str( random.random()), self._encoding))
-						m.update( bytes( str( part_info), self._encoding))
+						m.update( self._encode_value( str( time.time())))
+						m.update( self._encode_value( str( random.random())))
+						m.update( self._encode_value( str( part_info)))
 						
 						part_info[tmp_name_key] = self._uploaded_file_prefix + m.hexdigest()
 						part_info['handle'] = open( self._uploaded_files_dir + '/' + part_info[tmp_name_key], 'wb')
