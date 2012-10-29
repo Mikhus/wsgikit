@@ -30,6 +30,7 @@ setup(
 	platforms      = ['OS Independent'],
 	license        = 'MIT License',
 	cmdclass       = {'build_ext': build_ext},
+	packages       = ['wsgikit'],
 	ext_modules    = [Extension("wsgikit", ["wsgikit/wsgikit.pyx"])],
 	classifiers    = [
 		'Development Status :: 4 - Beta',
