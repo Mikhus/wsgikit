@@ -71,7 +71,7 @@ Installation as easy as:
 
 or
 
-    > easy_install sython
+    > easy_install cython
 
 There is also possibility to install Cython manually. Just download the package
 from http://cython.org/#download, unpack it and run:
