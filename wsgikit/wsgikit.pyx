@@ -23,7 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys,os,hashlib,time,random,re,cython
 
-__version__ = "0.2.4a"
+__version__ = "0.2.4"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
 
 class HttpRequestError(Exception):
