@@ -23,7 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys,os,hashlib,time,random,re
 
-__version__ = "0.2.2a"
+__version__ = "0.2.3a"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
 
 class HttpRequestError(Exception):
@@ -394,7 +394,7 @@ class HttpRequest(object):
 				if content_length > self._max_content_length :
 					raise MaxBodySizeError( self._max_content_length)
 				
-				self.BODY = self._parse_query_params( instream.read( content_length), self._encoding)
+				self.BODY = self._parse_query_params(  self._decode_value( instream.read( content_length)))
 	
 	def _parse_multipart(self, instream, boundary, content_length):
 		cdef int buff_len = self._read_block_size
