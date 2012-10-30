@@ -21,18 +21,20 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
-import sys,os,hashlib,time,random,re
+import sys,os,hashlib,time,random,re,cython
 
-__version__ = "0.2.3a"
+__version__ = "0.2.4a"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
 
 class HttpRequestError(Exception):
-	"""Base error class for wsgikit.HttpRequest object
+	"""
+	Base error class for wsgikit.HttpRequest object
 	"""
 	pass
 
 class MaxFilesError(HttpRequestError):
-	"""Raised if the limit of max allowed files to upload reached
+	"""
+	Raised if the limit of max allowed files to upload reached
 	"""
 	def __init__(self, limit):
 		self.limit = limit
@@ -53,7 +55,8 @@ class MaxFileSizeError(HttpRequestError):
 			%(self.filename, self.sizelimit)
 
 class MaxBodySizeError(HttpRequestError):
-	"""Raised if data in request body (excluding files) exceeded 
+	"""
+	Raised if data in request body (excluding files) exceeded 
 	allowed limit of bytes
 	"""
 	def __init__(self, sizelimit):
@@ -64,14 +67,16 @@ class MaxBodySizeError(HttpRequestError):
 			%(self.sizelimit)
 
 class FilesUploadError(HttpRequestError):
-	"""Raised if files upload was disabled but the request
+	"""
+	Raised if files upload was disabled but the request
 	contains the files in the body
 	"""
 	def __str__(self):
 		return "Files upload was disabled, but files were found in request body"
 
 class FileSaveError(HttpRequestError):
-	"""Raised if an error occured during an attemt to save the
+	"""
+	Raised if an error occured during an attemt to save the
 	uploaded file in a temporary location
 	"""
 	def __init__(self, filename, path, reason):
@@ -84,31 +89,26 @@ class FileSaveError(HttpRequestError):
 			%(self.filename, self.reason)
 
 class HttpRequest(object):
-	"""HttpRequest object handles an HTTP request, parses
-	and provides a request data in a suitable format for
-	further processing.
+	"""
+	HttpRequest object handles an HTTP request, parses and provides a
+	request data in a suitable format for further processing.
 	
-	Actually it is designed to handle a web environment
-	in WSGI application.
+	Actually it is designed to handle a web environment in WSGI application.
 	
 	Benefit of using the wsgikit.HttpRequest:
 	
-	- significantly faster than standard cgi module
-	  (savings grow exponentially to the amount
-	  of data in request)
-	- Protection to the WSGI application from 
-	  flooding (provides configurable limitations
-	  to the amount of allowed data in request body,
-	  limits a number of attached files and file size
-	  limit)
-	- Comfortable PHP-like representation of the request
-	  parameters:
-	   
+	- significantly faster than standard cgi module (savings grow
+	  exponentially to the amount of data in request)
+	- Protection to the WSGI application from flooding (provides
+	  configurable limitations to the amount of allowed data in request body,
+	  limits a number of attached files and file size limit)
+	- Comfortable PHP-like representation of the request parameters
+	
+	Like:
 	::
 		foo[][bar]=1&foo[][baz]=2&foo[xyz]=777
 	
 	will be parsed to the following dictionary:
-	
 	::
 		{
 			foo : {
@@ -126,7 +126,6 @@ class HttpRequest(object):
 	  etc.
 	
 	Basic usage example:
-	
 	::
 		import wsgikit
 		
@@ -138,22 +137,87 @@ class HttpRequest(object):
 			request = wsgikit.HttpRequest( environ)
 			
 			return str( request)
+	
+	**Public Properties:**
+	
+	:ivar QUERY: dict - Storage for handling QUERY_STRING parsed parameters \
+	(equivalent to PHP's $_GET)
+	
+	:ivar BODY: dict - Storage for handling request body parsed parameters \
+	(equivalent to PHP's $_POST)
+	
+	:ivar COOKIE: dict - Storage for handling cookie parsed variables \
+	(equivalent to PHP's $_COOKIE)
+	
+	:ivar HEADERS: dict - Storage for handling parsed request headers
+	
+	:ivar FILES: dict - Storage for handling uploaded files \
+	(equivalent to PHP's $_FILES, but the structure is different)
+	
+	File element structure is:
+	::
+		{
+			"filename" : str - uploaded file name,
+			"headers"  : dict - headers retrieved from the attachment part of te file in request body
+			"tmp_name" : str - path to temporary file location
+			"length"   : int - file size in bytes
+			"mime"     : str - file mime-type
+		}
+	
+	:ivar SERVER: dict - Storage for handling all server environment. \
+	It stores all WSGI environ, except 'wsgi.input' (equivalent to PHP's $_SERVER)
+	
+	:ivar FileUploader: wsgikit.FileUploader - Instance of FileUploader \
+	object associated with request  
+	
+	:ivar method: str - Shortcut to wsgikit.HttpRequest.server('REQUEST_METHOD')
+	
+	**Public Methods:**
 	"""
 	_rx_keys_lookup = re.compile( "\[(.*?)\]")
 	_rx_name_lookup = re.compile( "^(.*?)(?:\[.*$|$)")
 	
+	
+	@cython.embedsignature(True)
 	def __init__(self,
-		environ              = None,           # wsgi environment
-		encoding             = 'utf-8',        # request encoding
-		files_upload_on      = True,           # do uploaded files should be loaded to the memory or saved temporary to disc?
-		uploaded_files_dir   = '/tmp',         # where to store temporary uploaded files
-		max_uploaded_files   = 20,             # max number for uploaded files
-		max_filesize         = 2097152,        # 2MB max size per file
-		max_content_length   = 8388608,        # 8MB max size per body content
-		uploaded_file_prefix = 'http-upload-', # prefix to use for temporary uploaded file
-		read_block_size      = 8192            # 8KB by default of read data block size in bytes,
-											   # if 0 or negative value passed passed - will read everything into memory
+		environ              = None,
+		encoding             = 'utf-8',
+		files_upload_on      = True,
+		uploaded_files_dir   = '/tmp',
+		max_uploaded_files   = 20,
+		max_filesize         = 2097152,
+		max_content_length   = 8388608,
+		uploaded_file_prefix = 'http-upload-',
+		read_block_size      = 8192
 	):
+		"""
+		HttpRequest constructor
+		
+		:param environ: WSGI environment to parse
+		
+		:param encoding: str - [optional] HTTP request encoding, default - 'utf-8'
+		
+		:param files_upload_on: bool - [optional] turns on/off file upload with
+		HTTP requests, default - True
+		
+		:param uploaded_files_dir: str - [optional] path to directory, which stores
+		temporary uploaded files, default - '/tmp'
+		
+		:param max_uploaded_files: int - [optional] max number of allowed files to
+		upload, default - 20
+		
+		:param max_filesize: int - [optional] max allowed uploaded file size in bytes,
+		default - 2097152 (2MB)
+		
+		:param max_content_length: int - [optional] max allowed size in bytes for request
+		body, excluding the attached files. Default - 8388608 (8MB)
+		
+		:param uploaded_file_prefix: str - [optional] prefix to use for temporary
+		uploaded files, default - 'http-upload-'
+		
+		:param read_block_size: int - [optional] size of data read buffer,
+		default - 8192 (8KB)
+		"""
 		if environ is None:
 			environ = os.environ
 		
@@ -167,75 +231,16 @@ class HttpRequest(object):
 		self._uploaded_file_prefix = uploaded_file_prefix
 		self._read_block_size      = read_block_size
 		
-		"""
-		Storage for handling QUERY_STRING parsed parameters
-		(equivalent to PHP's $_GET)
-		
-		:ivar QUERY: dict  
-		"""
-		self.QUERY    = {}
-		"""
-		Storage for handling request body parsed parameters
-		(equivalent to PHP's $_POST)
-		
-		:ivar BODY: dict  
-		"""
-		self.BODY     = {}
-		"""
-		Storage for handling cookie parsed variables
-		(equivalent to PHP's $_COOKIE)
-		
-		:ivar COOKIE: dict  
-		"""
-		self.COOKIE   = {}
-		"""
-		Storage for handling parsed request headers
-		
-		:ivar HEADERS: dict
-		"""
-		self.HEADERS  = {}
-		"""
-		Storage for handling uploaded files
-		(equivalent to PHP's $_FILES, but the structure is different)
-		
-		File element structure is:
-		
-		::
-			{
-				"filename" : str - uploaded file name,
-				"headers"  : dict - headers retrieved from the attachment part of te file in request body
-				"tmp_name" : str - path to temporary file location
-				"length"   : int - file size in bytes
-				"mime"     : str - file mime-type
-			}
-		
-		:ivar FILES: dict
-		"""
-		self.FILES    = {}
-		"""
-		Storage for handling all server environment. It stores all WSGI environ,
-		except 'wsgi.input'
-		(equivalent to PHP's $_SERVER)
-		
-		:ivar SERVER: dict  
-		"""
-		self.SERVER   = {}
-		
-		"""
-		Instance of FileUploader object associated with request
-		
-		:ivar FileUploader: FileUploader  
-		"""
+		self.QUERY        = {}
+		self.BODY         = {}
+		self.COOKIE       = {}
+		self.HEADERS      = {}
+		self.FILES        = {}
+		self.SERVER       = {}
 		self.FileUploader = None
-		"""
-		Shortcut to HttpRequest.server('REQUEST_METHOD')
-		
-		:ivar method: str
-		"""
 		self.method       = None
 		
 		self._parse()
-	
 		
 	def _normilize_key(self, key):
 		key = key.lower().split( '-')
@@ -744,12 +749,14 @@ class HttpRequest(object):
 		)
 	
 	# PUBLIC INTERFACE:
-	
+	@cython.embedsignature(True)
 	def __str__(self):
 		return str( self.to_dict())
 	
+	@cython.embedsignature(True)
 	def to_dict(self):
-		"""Converts HttpRequest to dictionary presentation
+		"""
+		Converts HttpRequest to dictionary presentation
 		
 		:rtype: dict - dictionary representation of HttpRequest object
 		"""
@@ -762,8 +769,10 @@ class HttpRequest(object):
 			'FILES'   : self.FILES
 		}
 	
+	@cython.embedsignature(True)
 	def getenv(self, storage, key=None, default_value = None):
-		"""Returns an entire storage or a value stored in
+		"""
+		Returns an entire storage or a value stored in
 		this storage retrieved by a given key. Known storages are:
 		
 		- SERVER - server environment variables (everything which is
@@ -776,8 +785,8 @@ class HttpRequest(object):
 		
 		:param storage: name of a storage
 		:param key: [optional] key of the value to retrieve from tha given storage
-		:param default_value: [optional] if no value is present in storage by a
-		                      given key this will be returned (default is None)
+		:param default_value: [optional] if no value is present in storage by a \
+		given key this will be returned (default is None)
 		:rtype: mixed - storage dict or value or default_value
 		"""
 		env = getattr( self, storage)
@@ -797,13 +806,14 @@ class HttpRequest(object):
 		
 		return res
 	
+	@cython.embedsignature(True)
 	@classmethod
 	def parse_query( this, query_string):
-		"""Static method providing an ability to parse
+		"""
+		Static method providing an ability to parse
 		QUERY_STRING-like parameters in the same way as this object does.
 		
 		Usage example:
-		
 		::
 			import wsgikit
 			
@@ -815,9 +825,23 @@ class HttpRequest(object):
 		"""
 		return this._parse_query_params( query_string)
 	
+	@cython.embedsignature(True)
 	def header(self, name = None, default_value = None):
-		"""Returns the content of HEADER storage if none name passed
+		"""
+		Returns the content of HEADER storage if none name passed
 		or returns a value for header with given name
+		
+		Example:
+		::
+			request = wsgikit.HttpRequest( environ)
+			# returns dict of all headers
+			request.header()
+			
+			# returns value of Content-Type header
+			request.header('Content-Type')
+			
+			# returns value of X-MyHeader or False if header not found
+			request.header('X-My-Header', False)
 		
 		:param name: [optional] name of a header to get the value
 		:param default_value: [optional] value to return if no header with given name found
@@ -825,91 +849,166 @@ class HttpRequest(object):
 		"""
 		return self.getenv( 'HEADERS', name, default_value)
 	
+	@cython.embedsignature(True)
 	def body(self, name = None, default_value = None):
-		"""Returns the content of BODY storage if none name passed
+		"""
+		Returns the content of BODY storage if none name passed
 		or returns a value for body parameter with given name
 		
+		Example:
+		::
+			request = wsgikit.HttpRequest( environ)
+			# returns dict of all request body parameters
+			request.body()
+			
+			# returns value of passed_param or None if param not found
+			request.body('passed_param')
+		
 		:param name: [optional] name of a body parameter to get the value
-		:param default_value: [optional] value to return if no body parameter with given name found
+		:param default_value: [optional] value to return if no body parameter \
+		with given name found
 		:rtype: mixed - dict of body params or param value
 		"""
 		return self.getenv( 'BODY', name, default_value)
 	
+	@cython.embedsignature(True)
 	def query(self, name = None, default_value = None):
-		"""Returns the content of QUERY storage if none name passed
+		"""
+		Returns the content of QUERY storage if none name passed
 		or returns a value for QYERY_STRING parameter with given name
 		
+		Example:
+		::
+			request = wsgikit.HttpRequest( environ)
+			# returns dict of all QUERY_STRING parameters
+			request.query()
+			
+			# returns value of passed_param in QUERY_STRING or None if param not found
+			request.query('passed_param')
+		
 		:param name: [optional] name of a QUERY_STRING parameter to get the value
-		:param default_value: [optional] value to return if no QUERY_STRING parameter with given name found
+		:param default_value: [optional] value to return if no QUERY_STRING \
+		parameter with given name found
 		:rtype: mixed - dict of QUERY_STRING params or param value
 		"""
 		return self.getenv( 'QUERY', name, default_value)
 	
+	@cython.embedsignature(True)
 	def cookie(self, name = None, default_value = None):
-		"""Returns the content of COOKIE storage if none name passed
+		"""
+		Returns the content of COOKIE storage if none name passed
 		or returns a value for cookie parameter with given name
 		
+		Example:
+		::
+			request = wsgikit.HttpRequest( environ)
+			# returns dict of all cookie variables passed from client
+			request.cookie()
+			
+			# returns value of 'varname' from cookie or None if variable not found
+			request.cookie('varname')
+		
 		:param name: [optional] name of a cookie parameter to get the value
-		:param default_value: [optional] value to return if no cookie parameter with given name found
+		:param default_value: [optional] value to return if no cookie \
+		parameter with given name found
 		:rtype: mixed - dict of cookie params or param value
 		"""
 		return self.getenv( 'COOKIE', name, default_value)
 	
+	@cython.embedsignature(True)
 	def file(self, name = None, default_value = None):
-		"""Returns the content of FILES storage if none name passed
+		"""
+		Returns the content of FILES storage if none name passed
 		or returns a value for uploaded files with given name
 		
+		Example:
+		::
+			request = wsgikit.HttpRequest( environ)
+			# returns dict of all uploaded files within the request
+			request.file()
+			
+			# returns file(s) description object(s) having name 'file_param_name', or None if not found
+			request.file('file_param_name')
+		
 		:param name: [optional] name of a uploaded files to get the value
-		:param default_value: [optional] value to return if no uploaded files with given name found
+		:param default_value: [optional] value to return if no uploaded \
+		files with given name found
 		:rtype: mixed - dict of uploaded files or its part by a given name
 		"""
 		return self.getenv( 'FILES', name, default_value)
 	
+	@cython.embedsignature(True)
 	def server(self, name = None, default_value = None):
-		"""Returns the content of SERVER environment or the value
+		"""
+		Returns the content of SERVER environment or the value
 		of server environment variable.
 		
-		:param name: [optional] name of a server environment variable to get the value
-		:param default_value: [optional] value to return if no server environment variable with given name found
+		Example:
+		::
+			request = wsgikit.HttpRequest( environ)
+			# returns dict of all server environment variables
+			request.server()
+			
+			# returns value of 'REMOTE_ADDR' server environment variable
+			request.header('REMOTE_ADDR')
+		
+		:param name: [optional] name of a server environment variable \
+		to get the value
+		:param default_value: [optional] value to return if no server \
+		environment variable with given name found
 		:rtype: mixed - dict of body params or param value
 		"""
 		return self.getenv( 'SERVER', name, default_value)
 	
+	@cython.embedsignature(True)
 	def has_body(self):
-		"""Returns True if HTTP request body contains any params, False otherwise
+		"""
+		Returns True if HTTP request body contains any params,
+		False otherwise
 		
 		:rtype: bool
 		"""
 		return self.BODY != {}
 	
+	@cython.embedsignature(True)
 	def has_cookie(self):
-		"""Returns True if HTTP request pass any cookie variables, False otherwise
+		"""
+		Returns True if HTTP request pass any cookie variables,
+		False otherwise
 		
 		:rtype: bool
 		"""
 		return self.COOKIE != {}
 	
+	@cython.embedsignature(True)
 	def has_files(self):
-		"""Returns True if HTTP request contains any files attached and uploaded, False otherwise
+		"""
+		Returns True if HTTP request contains any files attached
+		and uploaded, False otherwise
 		
 		:rtype: bool
 		"""
 		return self.FILES != {}
 	
+	@cython.embedsignature(True)
 	def has_query(self):
-		"""Returns True if HTTP request contains any params passed with QUERY_STRING, False otherwise
+		"""
+		Returns True if HTTP request contains any params passed
+		with QUERY_STRING, False otherwise
 		
 		:rtype: bool
 		"""
 		return self.QUERY != {}
 
 class FileUploaderError(Exception):
-	"""Base error class for wsgikit.FileUploader object
+	"""
+	Base error class for wsgikit.FileUploader object
 	"""
 	pass
 
 class FileOverwriteError(FileUploaderError):
-	"""Raised if during the file move there is already file existing
+	"""
+	Raised if during the file move there is already file existing
 	with the same name and overwriting was disabled
 	"""
 	def __init__(self, filename):
@@ -920,7 +1019,8 @@ class FileOverwriteError(FileUploaderError):
 			%(self.filename)
 
 class UploadedFileSaveError(FileUploaderError):
-	"""Raised id during the save uploaded file an error occured
+	"""
+	Raised id during the save uploaded file an error occured
 	"""
 	def __init__(self, filename, reason):
 		self.filename = filename
@@ -931,13 +1031,15 @@ class UploadedFileSaveError(FileUploaderError):
 			%(self.filename, self.reason)
 
 class MoveError(FileUploaderError):
-	"""Raised when uploaded file move() was called with invalid arguments
+	"""
+	Raised when uploaded file move() was called with invalid arguments
 	"""
 	def __str__(self):
 		return 'Given file is invalid - expecting object from HttpRequest.FILES'
 
 class MoveDestinationError(FileUploaderError):
-	"""Raised when given destination to move uploaded files does not exist
+	"""
+	Raised when given destination to move uploaded files does not exist
 	"""
 	def __init__(self, destination):
 		self.destination = destination
@@ -947,7 +1049,8 @@ class MoveDestinationError(FileUploaderError):
 			%(self.destination)
 
 class FileUploader(object):
-	"""FileUploader object provides basic functionality to
+	"""
+	FileUploader object provides basic functionality to
 	work with files uploaded with wsgikit.HttpRequest object
 	
 	Naturally there is no need to instantiate it as far as it is
@@ -955,7 +1058,6 @@ class FileUploader(object):
 	request processing.
 	
 	It is enough to use it as:
-	
 	::
 		import wsgikit
 		
@@ -982,20 +1084,23 @@ class FileUploader(object):
 			
 			return my_response
 	"""
+	@cython.embedsignature(True)
 	def __init__(self, files, tmp_dir):
 		self.FILES      = files
 		self.tmp_dir    = tmp_dir
 	
+	@cython.embedsignature(True)
 	def move(self, file, destination, overwrite = False):
-		"""Moves the fiven file from a temporary location to the
+		"""
+		Moves a single uploaded file from a temporary location to the
 		given destination. If overwrite is turned on file will be
 		overwritten during the move, otherwise error will be raised
 		
-		:param file: dict object of the file compatible by structure with the
-		             FILES storage item in wsgikit.HttpRequest object
-		:param destination: str - path where to move the file. If existing directory
-		                    provided will save the file in that directory with the
-		                    file name passed in HTTP request
+		:param file: dict - file description compatible by structure with the \
+		FILES storage item from wsgikit.HttpRequest
+		:param destination: str - path where to move the file. If existing directory \
+		provided will save the file in that directory with the file name \
+		passed in HTTP request
 		:param overwrite: bool - flag, to turn on/off files overwriting
 		:rtype: returns new file destination on success
 		:raise: FileOverwriteError, UploadedFileSaveError or MoveError
@@ -1015,11 +1120,13 @@ class FileUploader(object):
 		else:
 			raise MoveError()
 	
+	@cython.embedsignature(True)
 	def move_all(self, destination, overwrite = False, fdict = None):
-		"""Moves all the files uploaded during HTTP request to the given destination
+		"""
+		Moves all the files uploaded during HTTP request to the given destination
 		
-		:param destination: str - path where to store the files. Destination MUST be
-		                    a directory, otherwise an error will be raised
+		:param destination: str - path where to store the files. Destination MUST \
+		be a directory, otherwise an error will be raised
 		:param overwrite: bool - flag, to turn on/off files overwriting
 		:rtype: list - new files destinations
 		:raise: FileOverwriteError, UploadedFileSaveError, MoveDestinationError or MoveError
@@ -1045,12 +1152,10 @@ class FileUploader(object):
 		return moved_files
 
 class PrettyDict:
-	"""Simple PrettyFormatter which provides an ability to
-	represent Python's dictionary object as human-readable
-	string
+	"""
+	Simple formatter to get Python dicts printed in human-readable format
 	
 	Usage example:
-	
 	::
 		import wsgikit
 		
@@ -1080,9 +1185,11 @@ class PrettyDict:
 		else:
 			return (' : "%s"' %(v)) + comma + "\n"
 	
+	@cython.embedsignature(True)
 	@classmethod
 	def format(this, d, tab = 4, indent = 0):
-		"""Performs dict formatting to human-readable string
+		"""
+		Performs dict formatting to human-readable string
 		
 		:param d: dictionary to format
 		:param tab: tab identation length
