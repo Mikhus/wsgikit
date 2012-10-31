@@ -23,7 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys,os,hashlib,time,random,re,cython
 
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
 
 class HttpRequestError(Exception):
@@ -89,7 +89,36 @@ class FileSaveError(HttpRequestError):
 			%(self.filename, self.reason)
 
 class HttpRequest(object):
-	"""
+	"""HttpRequest(environ = None, encoding = 'utf-8', files_upload_on = True, uploaded_files_dir = '/tmp', max_uploaded_files = 20, max_filesize = 2097152, max_content_length = 8388608, uploaded_file_prefix = 'http-upload-', read_block_size = 8192, max_body_header_size = 4096)
+	
+	:param environ: WSGI environment to parse
+		
+	:param encoding: str - [optional] HTTP request encoding, default - 'utf-8'
+	
+	:param files_upload_on: bool - [optional] turns on/off file upload with\
+	HTTP requests, default - True
+	
+	:param uploaded_files_dir: str - [optional] path to directory, which stores\
+	temporary uploaded files, default - '/tmp'
+	
+	:param max_uploaded_files: int - [optional] max number of allowed files to\
+	upload, default - 20
+	
+	:param max_filesize: int - [optional] max allowed uploaded file size in bytes,\
+	default - 2097152 (2MB)
+	
+	:param max_content_length: int - [optional] max allowed size in bytes for request\
+	body, excluding the attached files. Default - 8388608 (8MB)
+	
+	:param uploaded_file_prefix: str - [optional] prefix to use for temporary\
+	uploaded files, default - 'http-upload-'
+	
+	:param read_block_size: int - [optional] size of data read buffer,\
+	default - 8192 (8KB)
+	
+	:param max_body_header_size: int - [optional] max size in bytes for\
+	each part header section in multipart requests
+	
 	HttpRequest object handles an HTTP request, parses and provides a
 	request data in a suitable format for further processing.
 	
@@ -151,6 +180,14 @@ class HttpRequest(object):
 	
 	:ivar HEADERS: dict - Storage for handling parsed request headers
 	
+	:ivar SERVER: dict - Storage for handling all server environment. \
+	It stores all WSGI environ, except 'wsgi.input' (equivalent to PHP's $_SERVER)
+	
+	:ivar FileUploader: wsgikit.FileUploader - Instance of FileUploader \
+	object associated with request  
+	
+	:ivar method: str - Shortcut to wsgikit.HttpRequest.server('REQUEST_METHOD')
+	
 	:ivar FILES: dict - Storage for handling uploaded files \
 	(equivalent to PHP's $_FILES, but the structure is different)
 	
@@ -163,14 +200,6 @@ class HttpRequest(object):
 			"length"   : int - file size in bytes
 			"mime"     : str - file mime-type
 		}
-	
-	:ivar SERVER: dict - Storage for handling all server environment. \
-	It stores all WSGI environ, except 'wsgi.input' (equivalent to PHP's $_SERVER)
-	
-	:ivar FileUploader: wsgikit.FileUploader - Instance of FileUploader \
-	object associated with request  
-	
-	:ivar method: str - Shortcut to wsgikit.HttpRequest.server('REQUEST_METHOD')
 	
 	**Public Methods:**
 	"""
@@ -188,36 +217,9 @@ class HttpRequest(object):
 		max_filesize         = 2097152,
 		max_content_length   = 8388608,
 		uploaded_file_prefix = 'http-upload-',
-		read_block_size      = 8192
+		read_block_size      = 8192,
+		max_body_header_size = 4096
 	):
-		"""
-		HttpRequest constructor
-		
-		:param environ: WSGI environment to parse
-		
-		:param encoding: str - [optional] HTTP request encoding, default - 'utf-8'
-		
-		:param files_upload_on: bool - [optional] turns on/off file upload with
-		HTTP requests, default - True
-		
-		:param uploaded_files_dir: str - [optional] path to directory, which stores
-		temporary uploaded files, default - '/tmp'
-		
-		:param max_uploaded_files: int - [optional] max number of allowed files to
-		upload, default - 20
-		
-		:param max_filesize: int - [optional] max allowed uploaded file size in bytes,
-		default - 2097152 (2MB)
-		
-		:param max_content_length: int - [optional] max allowed size in bytes for request
-		body, excluding the attached files. Default - 8388608 (8MB)
-		
-		:param uploaded_file_prefix: str - [optional] prefix to use for temporary
-		uploaded files, default - 'http-upload-'
-		
-		:param read_block_size: int - [optional] size of data read buffer,
-		default - 8192 (8KB)
-		"""
 		if environ is None:
 			environ = os.environ
 		
@@ -230,6 +232,7 @@ class HttpRequest(object):
 		self._max_content_length   = max_content_length
 		self._uploaded_file_prefix = uploaded_file_prefix
 		self._read_block_size      = read_block_size
+		self._max_body_header_size = max_body_header_size
 		
 		self.QUERY        = {}
 		self.BODY         = {}
@@ -350,7 +353,7 @@ class HttpRequest(object):
 				self.SERVER[svar] = self._decode_value( self._environ[svar])
 	
 	def _parse_body(self):
-		cdef unsigned long content_length
+		cdef unsigned long content_length, max_clen
 		content_length = self.header( 'Content-Length', 0)
 		
 		if ('wsgi.input' not in self._environ) or not content_length:
@@ -393,6 +396,15 @@ class HttpRequest(object):
 					break
 			
 			if is_multipart:
+				max_clen = 0
+				max_clen += self._max_content_length
+				max_clen += self._max_filesize * self._max_uploaded_files
+				max_clen += self._max_uploaded_files * self._max_body_header_size
+				max_clen += self._max_body_header_size
+				
+				if content_length > max_clen:
+					raise MaxBodySizeError( max_clen)
+				
 				self._parse_multipart( instream, self._encode_value( boundary), content_length)
 			
 			else :
@@ -594,10 +606,13 @@ class HttpRequest(object):
 						part_info['handle'] = open( self._uploaded_files_dir + '/' + part_info[tmp_name_key], 'wb')
 					
 					part_info['handle'].write( line)
+				
 				except Exception as e:
 					raise FileSaveError( part_info['filename'], e)
+			
 			else :
 				raise FilesUploadError()
+		
 		else :
 			data_key = 'data'
 			
