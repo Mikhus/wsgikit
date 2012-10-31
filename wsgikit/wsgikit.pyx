@@ -418,6 +418,11 @@ class HttpRequest(object):
 			self._parts = {}
 		
 		try :
+			self._last_line
+		except AttributeError:
+			self._last_line = b''
+		
+		try :
 			self._files_counter
 		except AttributeError:
 			self._files_counter = 0
@@ -440,25 +445,10 @@ class HttpRequest(object):
 			if buff_len > remaining:
 				size = remaining
 			
-			data = instream.read( size)
-			remaining -= size
-			
-			curr_data = b''
-			
-			# we want to ensure the block ends-up with the new line
-			k = size
-			while k > 0:
-				k -= 1
-				
-				if data[k:k+1] == endl:
-					k += 1
-					break
-			
-			curr_data = next_data + data[:k]
-			next_data = data[k:]
-			
 			# OK, data block read - proceed with its parsing
-			self._parse_data_block( curr_data, boundary, k)
+			self._parse_data_block( instream.read( size), boundary, size)
+			
+			remaining -= size
 		
 		self._parse_to_files()
 		self._parse_to_body()
@@ -467,9 +457,10 @@ class HttpRequest(object):
 		del self._parts
 		del self._files_counter
 		del self._body_length
+		del self._last_line
 	
 	def _parse_data_block(self, data, boundary, data_length):
-		cdef int curr_part_idx
+		cdef int curr_part_idx, indx, CRLFLEN, ll
 		cdef unsigned long i
 		
 		prefix        = b'--'
@@ -478,14 +469,34 @@ class HttpRequest(object):
 		curr_part_idx = len( self._parts)
 		is_new_part   = False
 		i             = 0
-		endl          = b'\x0d\x0a'
+		CRLF          = b'\x0d\x0a'
+		CRLFLEN       = len( CRLF)
 		
 		disposition_key = 'Content-Disposition'
 		name_key        = 'Name'
 		filename_key    = 'Filename'
 		ctype_key       = 'Content-Type'
 		
-		lines = data.split( endl)
+		data = self._last_line + data
+		
+		lines = data.split( CRLF)
+		ll = len( lines)
+		
+		if ll == 1:
+			self._last_line = b''
+			self._handle_part_line( data, curr_part_idx)
+			return
+		
+		if not data.endswith( CRLF):
+			self._last_line = lines[-1]
+			lines = lines[:-1]
+		
+		if len( lines) > 0:
+			for i, line in enumerate( lines):
+				lines[i] += CRLF
+		
+		i = 0
+		
 		line = b''
 		while True:
 			try :
@@ -495,13 +506,10 @@ class HttpRequest(object):
 			
 			if is_new_part: # new started
 				while True:
-					
-					_line = line.decode( self._encoding).strip()
-					
-					if _line == '':
+					if line == CRLF:
 						break
 					
-					header = self._parse_key_value( [_line], ':', True)
+					header = self._parse_key_value( [self._decode_value( line).strip()], ':', True)
 					
 					if curr_part_idx not in self._parts:
 						self._parts[curr_part_idx] = {
@@ -544,28 +552,24 @@ class HttpRequest(object):
 				is_new_part = False
 			
 			else:
-				if line.startswith( prefix):
-					if line.startswith( part_boundary):
-						if line.startswith( last_boundary):
-							break # last boundary reached, stop parsing
-						
-						curr_part_idx += 1
-						is_new_part = True
+				if line.startswith( last_boundary):
+					break # last boundary reached, stop parsing
 				
-				if not is_new_part :
-					_endl = endl
-					
-					try :
+				elif line.startswith( part_boundary):
+					curr_part_idx += 1
+					is_new_part = True
+				
+				if not is_new_part:
+					try:
 						next_line = lines[i + 1]
-						if next_line.startswith( prefix):
-							if next_line.startswith( part_boundary):
-								_endl = b''
-					except IndexError:
-						_endl = b''
+						if next_line.startswith( part_boundary):
+							line = line[:-CRLFLEN]
+					except :
+						pass
 					
-					self._handle_part_line( line + _endl, curr_part_idx)
+					self._handle_part_line( line, curr_part_idx)
 			
-			i += 1			
+			i += 1
 	
 	def _handle_part_line(self, line, unsigned int part_idx):
 		part_info = self._parts[part_idx]
