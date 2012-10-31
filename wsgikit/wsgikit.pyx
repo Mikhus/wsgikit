@@ -23,7 +23,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys,os,hashlib,time,random,re,cython
 
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 __author__  = ["Mykhailo Stadnyk <mikhus@gmail.com>"]
 
 class HttpRequestError(Exception):
@@ -699,6 +699,21 @@ class HttpRequest(object):
 		for key in keys:
 			part = self._parts[key]
 			if part['filename'] is not None:
+				if not part['filename']:
+					if part['length'] <= 0:
+						# empty form file element passed - skip it
+						part['handle'].close()
+						
+						try : # try to remove temporary file silently
+							os.remove( self._uploaded_files_dir + '/' + part['tmp_name'])
+						except:
+							pass
+						
+						del self._parts[key]
+						continue
+					else :
+						part['filename'] = part['tmp_name']
+				
 				name = part['name']
 				del part['name']
 				
