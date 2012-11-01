@@ -97,8 +97,8 @@ It's also available manual installation from git repository, like
 
 Documentation
 --------------------------------------------------------------------------------
-On-line documentation coming soon. Module is self-documented, so it is available
-to read docs by using
+On-line documentation is available at http://packages.python.org/wsgikit/
+Module is self-documented, so it is available also to read docs by using
 
     > import wsgikit
     > help(wsgikit)
@@ -115,3 +115,4 @@ Copyright (c) 2012
 Author: Mykhailo Stadnyk <mikhus@gmail.com>
 
 Home page: https://github.com/Mikhus/wsgikit
+PyPi package: http://pypi.python.org/pypi/wsgikit
