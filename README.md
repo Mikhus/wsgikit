@@ -98,6 +98,7 @@ It's also available manual installation from git repository, like
 Documentation
 --------------------------------------------------------------------------------
 On-line documentation is available at http://packages.python.org/wsgikit/
+
 Module is self-documented, so it is available also to read docs by using
 
     > import wsgikit
